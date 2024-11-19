@@ -1,105 +1,35 @@
-# ----------------------------------------------------------------------------------------
-# lab05.s 
-#  Verifies the correctness of some aspects of a 5-stage pipelined RISC-V implementation
-# ----------------------------------------------------------------------------------------
+# lab05.s - Τροποποιημένος κώδικας για Ripes
+# Παραδείγματα προώθησης, καθυστερήσεων και διακλαδώσεων
 
-.data
-storage:
-    .word 1
-    .word 10
-    .word 11
+# Αρχικοποίηση καταχωρητών
+addi x6, x0, 5        # x6 = 5
+addi x18, x0, 10      # x18 = 10
+addi x5, x0, 20       # x5 = 20
+addi x4, x0, 15       # x4 = 15
+addi x10, x0, 0       # x10 = 0
 
-.text
-# ----------------------------------------------------------------------------------------
-# prepare register values.
-# ----------------------------------------------------------------------------------------
-#  la breaks into 2 instructions, which have a data dependence. Ignore this 
-    la   a0, storage
-    addi s0, zero, 0
-    addi s1, zero, 1
-    addi s2, zero, 2
-    addi s3, zero, 3
+# Παράδειγμα 1: Προώθηση στη μεθεπόμενη εντολή
+add x7, x6, x18       # Πράξη 1: Υπολογισμός x7
+nop                   # Κενή εντολή (για δοκιμή χωρίς προώθηση)
+add x8, x7, x5        # Πράξη 2: Χρήση του x7
+nop
 
-# ----------------------------------------------------------------------------------------
-# Verify forwarding from the previous ALU instruction to input Op1 of ALU
-# There should be no added delay here.
-    addi t1,   s0, 1     
-    add  t2,   t1, s2 
-    # nop instructions added between examples
-    add  zero, zero, zero  
-    add  zero, zero, zero  
-    add  zero, zero, zero  
+# Παράδειγμα 2: Διπλός κίνδυνος δεδομένων
+add x7, x6, x18       # Πρώτη πράξη: Υπολογισμός x7
+add x7, x7, x5        # Δεύτερη πράξη: Νέα τιμή για x7
+add x8, x7, x4        # Τρίτη πράξη: Χρήση της πιο πρόσφατης τιμής του x7
+nop
 
-# ----------------------------------------------------------------------------------------
-# Verify load-use 1 cycle stall and correct passing of load's value
-    lw   t3, 4(a0)
-    add  t4, zero, t3   # t4 should be storage[1] = 10
-    # nop instructions added between examples
-    add  zero, zero, zero  
-    add  zero, zero, zero  
-    add  zero, zero, zero  
+# Παράδειγμα 3: Load προς διακλάδωση
+lw x7, 0(x6)          # Φόρτωση τιμής στη μνήμη
+beq x7, x0, label     # Εξαρτάται από το x7
+nop                   # Αναμονή (αν υπάρχει καθυστέρηση)
+label:
+add x8, x7, x5        # Εντολή μετά τη διακλάδωση
+nop
 
-# ----------------------------------------------------------------------------------------
-# Check how many cycles are lost due to pipe flush following a jump.
-# Also verify that the instruction(s) following the jump are not executed (i.e. writing to a register)
-    j    next
-    add  t5, s1, s2
-    add  t6, s1, s2
-next:
-    # nop instructions added between examples
-    add  zero, zero, zero  
-    add  zero, zero, zero  
-    add  zero, zero, zero  
-
-# ----------------------------------------------------------------------------------------
-# Verify that no cycles are lost when a branch is NOT taken
-    beq  s1, s2, next
-    add  t5, s1, s2
-    add  t6, s1, s3
-
-# ----------------------------------------------------------------------------------------
-# Check how many cycles are lost when a branch IS taken
-    beq  s1, s1, taken
-    add  t0, zero, s3
-    add  t1, zero, s2
-taken:
-
-# ----------------------------------------------------------------------------------------
-# TODO: Add an example where an instruction passes its result to the 2nd following instruction
-# There should be no stalls
-# ----------------------------------------------------------------------------------------
-    # nop instructions added between examples
-    add  zero, zero, zero  
-    add  zero, zero, zero  
-    add  zero, zero, zero  
-
-# ----------------------------------------------------------------------------------------
-# TODO: Add an example with a double hazard and check that it works corretly.
-# A double hazzard is when the source register of an instruction matches the destination
-#  registers of both of the two instructions preceeding it. It should get the newest value.
-# There should be no stalls
-# ----------------------------------------------------------------------------------------
-    # nop instructions added between examples
-    add  zero, zero, zero  
-    add  zero, zero, zero  
-    add  zero, zero, zero  
-
-# ----------------------------------------------------------------------------------------
-# TODO: Add an example with a load stalling for 1 cycle to pass a value to a NOT-TAKEN branch 
-#  Is this a data hazard or a control hazard?
-# ----------------------------------------------------------------------------------------
-    # nop instructions added between examples
-    add  zero, zero, zero  
-    add  zero, zero, zero  
-    add  zero, zero, zero  
-
-# ----------------------------------------------------------------------------------------
-# TODO: Add an example with taken branch to a label which is immediately following the branch
-# ----------------------------------------------------------------------------------------
-
-
-
-exit:  
-    addi      a7, zero, 10    
-    ecall
-
+# Παράδειγμα 4: Διακλάδωση στον επόμενο στόχο
+beq x0, x0, target    # Πάντα αληθές
+target:
+add x7, x6, x18       # Εκτέλεση εντολής στόχου
+nop
